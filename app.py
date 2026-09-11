@@ -3,35 +3,20 @@ import os
 import json
 import google.generativeai as genai
 
-# --- 1. CHATGPT DARK THEME STYLE (CSS HACK) ---
+# --- 1. CHATGPT DARK THEME STYLE ---
 st.set_page_config(page_title="ChatGPT - PowerWise SDG 7", page_icon="⚡", layout="centered")
 
 st.markdown("""
     <style>
-    .stApp {
-        background-color: #212121 !important;
-        color: #ececec !important;
-    }
-    .stChatInputContainer {
-        padding-bottom: 20px !important;
-    }
-    .stChatInput div {
-        background-color: #2f2f2f !important;
-        border: 1px solid #424242 !important;
-        color: #ffffff !important;
-        border-radius: 12px !important;
-    }
-    h1, h2, h3, p, span, li {
-        color: #ffffff !important;
-        font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif;
-    }
-    section[data-testid="stSidebar"] {
-        background-color: #171717 !important;
-    }
+    .stApp { background-color: #212121 !important; color: #ececec !important; }
+    .stChatInputContainer { padding-bottom: 20px !important; }
+    .stChatInput div { background-color: #2f2f2f !important; border: 1px solid #424242 !important; color: #ffffff !important; border-radius: 12px !important; }
+    h1, h2, h3, p, span, li { color: #ffffff !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    section[data-testid="stSidebar"] { background-color: #171717 !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. GET API KEY & INITIALIZE GEMINI (CLASSIC STABLE SDK) ---
+# --- 2. GET API KEY & INITIALIZE GEMINI ---
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
@@ -41,7 +26,6 @@ if not api_key:
     st.error("Missing GEMINI_API_KEY. Please set it in Streamlit Secrets.")
     st.stop()
 
-# Configure the classic stable library
 genai.configure(api_key=api_key)
 
 # --- 3. STRICT SDG 7 SYSTEM INSTRUCTION ---
@@ -53,16 +37,15 @@ SYSTEM_INSTRUCTION = (
     "'I am a specialized SDG 7 Clean Energy Advisor. I can only assist with queries related to sustainable energy, electricity conservation, and clean technology.'"
 )
 
-# --- 4. BACKEND API FUNCTION FOR JUDGES ---
+# --- 4. BACKEND API FUNCTION FOR JUDGES (Using Stable Gemini 2.5) ---
 def run_api_backend(user_prompt, history_context=[]):
     try:
-        # Initialize model with stable version and system instruction
+        # Switched to the modern available gemini-2.5-flash model
         model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash',
+            model_name='gemini-2.5-flash',
             system_instruction=SYSTEM_INSTRUCTION
         )
         
-        # Format history for the classic SDK
         formatted_history = []
         for msg in history_context:
             role = "user" if msg["role"] == "user" else "model"

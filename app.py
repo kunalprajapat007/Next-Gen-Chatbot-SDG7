@@ -26,7 +26,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 2. INITIALIZE GEMINI LLM FOR ALL-ROUND QUESTIONS ---
-# Streamlit secrets se API Key read karega
 if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"].strip() != "":
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
@@ -46,14 +45,13 @@ def run_api_backend(user_prompt, history_context=[]):
         name = user_prompt.lower().split("is")[-1].strip().title()
         return {"status": "success", "response": f"Nice to meet you, **{name}**! 🤝 I am PowerWise AI. I can answer any question you have, with a special expertise in SDG 7 (Clean Energy). What's on your mind?"}
 
-    # --- MAIN AI ENGINE (GEMINI 2.5 FLASH - SUPER STABLE) ---
+    # --- MAIN AI ENGINE (UPDATED TO GEMINI 3.6 FLASH) ---
     try:
-        # Sabse stable aur fast production model jo har sawal ka jawab dega
+        # UPDATED: Google ke naye model name 'gemini-3.6-flash' ka use kiya hai
         model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash"
+            model_name="gemini-3.6-flash"
         )
         
-        # System instructions ko chat start karte waat context mein bhej rahe hain
         full_prompt = (
             "You are PowerWise AI, an all-purpose AI assistant themed around SDG 7 (Affordable and Clean Energy). "
             "You must answer ALL types of questions asked by the user including coding, poems, history, recipes, etc. "
@@ -64,7 +62,6 @@ def run_api_backend(user_prompt, history_context=[]):
         return {"status": "success", "response": response.text}
         
     except Exception as e:
-        # Catch internal error safely so app doesn't freeze
         return {"status": "error", "response": f"Sorry, I faced an issue connecting to the AI. Ensure your API Key is correct. (Details: {str(e)})"}
 
 # --- 3. DETECT IF JUDGES ARE QUERYING THE API VIA PARAMS ---

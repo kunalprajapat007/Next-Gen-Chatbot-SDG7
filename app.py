@@ -34,7 +34,8 @@ if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"].strip() != ""
     except Exception:
         api_key_configured = False
 
-def run_api_backend(user_prompt, history_context=[]):
+# Optimized backend function supporting streaming
+def get_ai_stream(user_prompt, history_context=[]):
     clean_prompt = user_prompt.lower().strip("?.! ")
     
     # --- PERSISTENT MEMORY CONTEXTUAL LOGIC ---
@@ -42,21 +43,20 @@ def run_api_backend(user_prompt, history_context=[]):
         if msg["role"] == "user" and "my name is" in msg["content"].lower():
             name_part = msg["content"].lower().split("my name is")[-1].strip().title()
             if "name" in clean_prompt:
-                return {"status": "success", "response": f"Your name is **{name_part}**. I remember our conversation! How else can I assist you today?"}
+                yield f"Your name is **{name_part}**. I remember our conversation! How else can I assist you today?"
+                return
 
     if "my name is" in clean_prompt:
         name = user_prompt.lower().split("is")[-1].strip().title()
-        return {"status": "success", "response": f"Nice to meet you, **{name}**! 🤝 I am PowerWise AI. I can answer any question you have, with a special expertise in SDG 7 (Clean Energy). What's on your mind?"}
+        yield f"Nice to meet you, **{name}**! 🤝 I am PowerWise AI. I can answer any question you have, with a special expertise in SDG 7 (Clean Energy). What's on your mind?"
+        return
 
-    # --- MAIN AI ENGINE (LATEST GEMINI WITH HISTORY CONTEXT) ---
+    # --- MAIN AI ENGINE WITH STREAMING ---
     if api_key_configured:
         try:
-            # Model definition
             model = genai.GenerativeModel(model_name="gemini-3.6-flash")
-            
-            # Formulating the prompt along with past conversation context for Gemini
             context_string = ""
-            for msg in history_context[-6:]: # Sends the last 6 messages as active short-term context to the AI
+            for msg in history_context[-6:]:
                 context_string += f"{msg['role'].upper()}: {msg['content']}\n"
                 
             full_prompt = (
@@ -65,39 +65,32 @@ def run_api_backend(user_prompt, history_context=[]):
                 f"Conversation History:\n{context_string}"
                 f"User Question: {user_prompt}"
             )
-            response = model.generate_content(full_prompt)
-            return {"status": "success", "response": response.text}
+            # generate_content_stream se response tukdo mein fast aata hai
+            response = model.generate_content(full_prompt, stream=True)
+            for chunk in response:
+                yield chunk.text
+            return
         except Exception:
             pass
 
     # --- SMART LOCAL BACKUP MODE ---
     if clean_prompt in ["hi", "hy", "hello", "hey"]:
-        return {"status": "success", "response": "Hello! 👋 I am **PowerWise AI**. Ask me absolutely anything today!"}
+        yield "Hello! 👋 I am **PowerWise AI**. Ask me absolutely anything today!"
     elif "energy" in clean_prompt or "clean energy" in clean_prompt:
-        return {"status": "success", "response": "### ⚡ Clean Energy Overview\nClean energy is energy that comes from renewable, zero-emission sources. The motto of SDG 7 is to *ensure access to affordable, reliable, sustainable and modern energy for all by 2030*."}
+        yield "### ⚡ Clean Energy Overview\nClean energy is energy that comes from renewable, zero-emission sources. The motto of SDG 7 is to *ensure access to affordable, reliable, sustainable and modern energy for all by 2030*."
     elif "coding" in clean_prompt or "code" in clean_prompt or "python" in clean_prompt:
-        return {"status": "success", "response": "### 💻 Python Code Example\nHere is a simple example to print text:\n```python\nprint('Hello World!')\n```"}
-        
-    return {"status": "success", "response": f"I received your question: *'{user_prompt}'*.\n\n(Tip: Active live brain requires a valid `GEMINI_API_KEY` inside Streamlit Cloud secrets.)"}
+        yield "### 💻 Python Code Example\nHere is a simple example to print text:\n```python\nprint('Hello World!')\n```"
+    else:
+        yield f"I received your question: *'{user_prompt}'*.\n\n(Tip: Active live brain requires a valid `GEMINI_API_KEY` inside Streamlit Cloud secrets.)"
 
-# --- 3. DETECT IF JUDGES ARE QUERYING THE API VIA PARAMS ---
-query_params = st.query_params
-if "api_query" in query_params:
-    input_query = query_params["api_query"]
-    api_result = run_api_backend(input_query, st.session_state.get("messages", []))
-    st.text(json.dumps(api_result))
-    st.stop()
-
-# --- 4. 🧠 PERMANENT HISTORY CONTROLLER (LOCAL STORAGE SIMULATION) ---
-# Initialize session state first
+# --- 3. INITIALIZE PERSISTENT CHAT HISTORY ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 5. SIDEBAR OPTIONS HUB & HISTORY MANAGEMENT ---
+# --- 4. SIDEBAR OPTIONS HUB & HISTORY MANAGEMENT ---
 st.sidebar.markdown("## ⚡ PowerWise Control Panel")
 st.sidebar.markdown("---")
 
-# Permanent Chat Clear Action
 st.sidebar.markdown("### ⚙️ Chat Settings")
 if st.sidebar.button("🗑️ Clear Chat History"):
     st.session_state.messages = []
@@ -108,32 +101,33 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### 💡 Sample Queries")
 if st.sidebar.button("🌍 What is SDG 7 Goal?"):
     st.session_state.messages.append({"role": "user", "content": "What is SDG 7?"})
-    api_res = run_api_backend("What is SDG 7?", st.session_state.messages[:-1])
-    st.session_state.messages.append({"role": "assistant", "content": api_res["response"]})
     st.rerun()
 
 if st.sidebar.button("💻 Write a Python Function"):
     st.session_state.messages.append({"role": "user", "content": "Write a python function."})
-    api_res = run_api_backend("Write a python function.", st.session_state.messages[:-1])
-    st.session_state.messages.append({"role": "assistant", "content": api_res["response"]})
     st.rerun()
 
-# --- 6. MAIN CHAT AREA ---
+# --- 5. MAIN CHAT AREA ---
 st.title("⚡ PowerWise AI")
 st.markdown("<p class='unique-tagline'>✨ Fueling the Future, One Clean Prompt at a Time</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Render historical messages from session state
+# Render historical messages
 for message in st.session_state.messages:
     avatar = "👤" if message["role"] == "user" else "🤖"
     with st.chat_message(message["role"], avatar=avatar):
         st.markdown(message["content"])
 
-# COMPLETED NATIVE STREAMLIT INPUT BOX LOGIC WITH HISTORY TRACKING
+# Check if last message needs an AI response (Fixes delay & triggers instant stream)
+if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
+    last_prompt = st.session_state.messages[-1]["content"]
+    with st.chat_message("assistant", avatar="🤖"):
+        # st.write_stream se text fast aur dynamic generate hoga
+        response_placeholder = st.write_stream(get_ai_stream(last_prompt, st.session_state.messages[:-1]))
+    st.session_state.messages.append({"role": "assistant", "content": response_placeholder})
+    st.rerun()
+
+# NATIVE STREAMLIT INPUT BOX LOGIC
 if prompt := st.chat_input("Ask PowerWise AI absolutely anything..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    
-    # Passing current chat list dynamically to backend engine so Gemini remembers everything!
-    api_res = run_api_backend(prompt, st.session_state.messages[:-1])
-    st.session_state.messages.append({"role": "assistant", "content": api_res["response"]})
     st.rerun()

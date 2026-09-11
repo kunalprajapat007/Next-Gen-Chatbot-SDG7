@@ -1,11 +1,9 @@
 import streamlit as st
-import json
 import google.generativeai as genai
 
 # --- 1. CLEAN STANDARD LAYOUT (FIXES INPUT BOX VISIBILITY) ---
 st.set_page_config(page_title="PowerWise SDG 7", page_icon="⚡", layout="centered")
 
-# Minimal CSS to avoid blocking Streamlit's default components
 st.markdown("""
     <style>
     h1 {
@@ -34,7 +32,7 @@ if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"].strip() != ""
     except Exception:
         api_key_configured = False
 
-# Optimized backend function supporting streaming
+# Fast Streaming Response Engine
 def get_ai_stream(user_prompt, history_context=[]):
     clean_prompt = user_prompt.lower().strip("?.! ")
     
@@ -51,12 +49,14 @@ def get_ai_stream(user_prompt, history_context=[]):
         yield f"Nice to meet you, **{name}**! 🤝 I am PowerWise AI. I can answer any question you have, with a special expertise in SDG 7 (Clean Energy). What's on your mind?"
         return
 
-    # --- MAIN AI ENGINE WITH STREAMING ---
+    # --- MAIN AI ENGINE (GEMINI 3.7 FLASH - ULTRA FAST PERFORMANCE) ---
     if api_key_configured:
         try:
-            model = genai.GenerativeModel(model_name="gemini-3.6-flash")
+            # Google ke sabse fast production aur stable tier model ka use
+            model = genai.GenerativeModel(model_name="gemini-3.7-flash")
+            
             context_string = ""
-            for msg in history_context[-6:]:
+            for msg in history_context[-4:]: # Optimization: Context window ko optimize kiya for higher speed
                 context_string += f"{msg['role'].upper()}: {msg['content']}\n"
                 
             full_prompt = (
@@ -65,46 +65,42 @@ def get_ai_stream(user_prompt, history_context=[]):
                 f"Conversation History:\n{context_string}"
                 f"User Question: {user_prompt}"
             )
-            # generate_content_stream se response tukdo mein fast aata hai
+            
             response = model.generate_content(full_prompt, stream=True)
             for chunk in response:
-                yield chunk.text
+                if chunk.text:
+                    yield chunk.text
             return
         except Exception:
             pass
 
-    # --- SMART LOCAL BACKUP MODE ---
+    # --- SMART LOCAL BACKUP MODE (No API Key Fallback) ---
     if clean_prompt in ["hi", "hy", "hello", "hey"]:
         yield "Hello! 👋 I am **PowerWise AI**. Ask me absolutely anything today!"
     elif "energy" in clean_prompt or "clean energy" in clean_prompt:
         yield "### ⚡ Clean Energy Overview\nClean energy is energy that comes from renewable, zero-emission sources. The motto of SDG 7 is to *ensure access to affordable, reliable, sustainable and modern energy for all by 2030*."
     elif "coding" in clean_prompt or "code" in clean_prompt or "python" in clean_prompt:
-        yield "### 💻 Python Code Example\nHere is a simple example to print text:\n```python\nprint('Hello World!')\n```"
+        yield "### 💻 Python Code Example\n```python\nprint('Hello World!')\n```"
     else:
-        yield f"I received your question: *'{user_prompt}'*.\n\n(Tip: Active live brain requires a valid `GEMINI_API_KEY` inside Streamlit Cloud secrets.)"
+        yield f"I received your question: *'{user_prompt}'*.\n\n(Tip: Live brain updates require a valid `GEMINI_API_KEY` inside Streamlit Cloud secrets.)"
 
 # --- 3. INITIALIZE PERSISTENT CHAT HISTORY ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 4. SIDEBAR OPTIONS HUB & HISTORY MANAGEMENT ---
+# --- 4. SIDEBAR OPTIONS HUB ---
 st.sidebar.markdown("## ⚡ PowerWise Control Panel")
 st.sidebar.markdown("---")
 
 st.sidebar.markdown("### ⚙️ Chat Settings")
 if st.sidebar.button("🗑️ Clear Chat History"):
     st.session_state.messages = []
-    st.success("Chat history cleared locally!")
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 💡 Sample Queries")
+st.sidebar.markdown("### 💡 Quick Queries")
 if st.sidebar.button("🌍 What is SDG 7 Goal?"):
     st.session_state.messages.append({"role": "user", "content": "What is SDG 7?"})
-    st.rerun()
-
-if st.sidebar.button("💻 Write a Python Function"):
-    st.session_state.messages.append({"role": "user", "content": "Write a python function."})
     st.rerun()
 
 # --- 5. MAIN CHAT AREA ---
@@ -112,22 +108,21 @@ st.title("⚡ PowerWise AI")
 st.markdown("<p class='unique-tagline'>✨ Fueling the Future, One Clean Prompt at a Time</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Render historical messages
+# Render past chats instantly
 for message in st.session_state.messages:
     avatar = "👤" if message["role"] == "user" else "🤖"
     with st.chat_message(message["role"], avatar=avatar):
         st.markdown(message["content"])
 
-# Check if last message needs an AI response (Fixes delay & triggers instant stream)
-if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
-    last_prompt = st.session_state.messages[-1]["content"]
-    with st.chat_message("assistant", avatar="🤖"):
-        # st.write_stream se text fast aur dynamic generate hoga
-        response_placeholder = st.write_stream(get_ai_stream(last_prompt, st.session_state.messages[:-1]))
-    st.session_state.messages.append({"role": "assistant", "content": response_placeholder})
-    st.rerun()
-
-# NATIVE STREAMLIT INPUT BOX LOGIC
+# REAL-TIME INSTANT CHAT INPUT LOGIC
 if prompt := st.chat_input("Ask PowerWise AI absolutely anything..."):
+    # Display user input immediately without full page block
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
-    st.rerun()
+    
+    # Stream AI output instantly word-by-word
+    with st.chat_message("assistant", avatar="🤖"):
+        response_placeholder = st.write_stream(get_ai_stream(prompt, st.session_state.messages[:-1]))
+    
+    st.session_state.messages.append({"role": "assistant", "content": response_placeholder})

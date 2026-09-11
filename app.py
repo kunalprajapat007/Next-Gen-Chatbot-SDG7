@@ -1,82 +1,25 @@
 import streamlit as st
 import json
 
-# --- 1. PERFECT SEAMLESS VISUAL THEME ---
+# --- 1. CLEAN STANDARD LAYOUT (FIXES INPUT BOX VISIBILITY) ---
 st.set_page_config(page_title="PowerWise SDG 7", page_icon="⚡", layout="centered")
 
-# Cleaned & fixed CSS to guarantee Chat Input visibility
+# Minimal CSS to avoid blocking Streamlit's default components
 st.markdown("""
     <style>
-    /* Continuous dark background for entire viewport */
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .stApp { 
-        background-color: #0f172a !important; 
-        color: #f8fafc !important; 
-    }
-    
-    /* FIX: Force bottom chat container to be visible and correctly colored */
-    [data-testid="stBottom"] {
-        background-color: #0f172a !important;
-    }
-    
-    /* Interactive Branded Chat Input Box */
-    .stChatInput div { 
-        background-color: #1e293b !important; 
-        border: 2px solid #334155 !important; 
-        color: #ffffff !important; 
-        border-radius: 20px !important;
-        transition: all 0.3s ease;
-    }
-    
-    /* Neon Glow on Hover & Focus */
-    .stChatInput div:hover, .stChatInput div:focus-within {
-        border-color: #00d2ff !important;
-        box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
-    }
-    
-    /* Typography Style Customization */
-    h1, h2, h3, p, span, li, label { 
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
-    }
     h1 {
         background: linear-gradient(90deg, #00ffcc, #00d2ff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 800 !important;
-        letter-spacing: -0.5px;
         margin-bottom: 0px !important;
     }
     .unique-tagline {
         color: #00ffcc !important;
         font-style: italic;
         font-size: 14px;
-        margin-top: -10px !important;
+        margin-top: 5px !important;
         margin-bottom: 20px !important;
-        letter-spacing: 0.5px;
-    }
-    
-    /* Sleek Fluid Sidebar Coordination */
-    section[data-testid="stSidebar"] { 
-        background-color: #090d16 !important; 
-        border-right: 1px solid #1e293b !important;
-    }
-    
-    /* Interactive Cyber Glow Sidebar Buttons */
-    .stButton>button {
-        background: linear-gradient(90deg, #1e293b, #0f172a) !important;
-        color: #00d2ff !important;
-        border: 1px solid #334155 !important;
-        border-radius: 12px !important;
-        transition: all 0.3s ease;
-        width: 100% !important;
-        text-align: left !important;
-        font-weight: 500 !important;
-    }
-    .stButton>button:hover {
-        background: linear-gradient(90deg, #00d2ff, #00ffcc) !important;
-        color: #090d16 !important;
-        box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
-        transform: translateY(-2px);
-        border-color: transparent !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -154,7 +97,7 @@ if "api_query" in query_params:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 5. SIDEBAR HUB ---
+# --- 5. SIDEBAR OPTIONS HUB ---
 st.sidebar.markdown("## ⚡ PowerWise Control Panel")
 st.sidebar.markdown("---")
 
@@ -176,17 +119,36 @@ if st.sidebar.button("📉 Cut Light Bill by 20%"):
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🎯 Core UN Focus Targets")
-st.sidebar.caption("• **Target 7.1:** Universal Access to Modern Energy Services")
-st.sidebar.caption("• **Target 7.2:** Increase Share of Renewable Clean Energy")
-st.sidebar.caption("• **Target 7.3:** Double the Global Rate of Energy Efficiency")
+st.sidebar.caption("• Target 7.1: Universal Access")
+st.sidebar.caption("• Target 7.2: Increase Clean Share")
+st.sidebar.caption("• Target 7.3: Double Efficiency")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 👨‍⚖️ Evaluation Guide")
-st.sidebar.caption("💡 Try asking: *'My name is Kunal'* followed by *'What is my name?'* to test full conversational chat memory context tracking live.")
+st.sidebar.caption("💡 Try asking: 'My name is Kunal' then 'What is my name?' to test context tracking memory.")
 
-# --- 6. MAIN UNIFIED INTERACTIVE CHAT INTERFACE ---
+# --- 6. MAIN CHAT AREA ---
 st.title("⚡ PowerWise AI")
 st.markdown("<p class='unique-tagline'>✨ Fueling the Future, One Clean Prompt at a Time</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Render persistent conversation threads beautifully
+# Render previous chat blocks correctly
+for message in st.session_state.messages:
+    avatar = "👤" if message["role"] == "user" else "🤖"
+    with st.chat_message(message["role"], avatar=avatar):
+        st.markdown(message["content"])
+
+# NATIVE STREAMLIT INPUT BOX (100% Guaranteed Visibility)
+if prompt := st.chat_input("Ask PowerWise AI about Clean Energy..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(prompt)
+    
+    # Instant response loop
+    api_response = run_api_backend(prompt, st.session_state.messages[:-1])
+    answer = api_response["response"]
+
+    st.session_state.messages.append({"role": "assistant", "content": answer})
+    with st.chat_message("assistant", avatar="🤖"):
+        st.markdown(answer)

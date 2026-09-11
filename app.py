@@ -93,7 +93,7 @@ def run_api_backend(user_prompt, history_context=[]):
         name = user_prompt.lower().split("is")[-1].strip().title()
         return {"status": "success", "response": f"Nice to meet you, **{name}**! 🤝 Let's explore how we can support **SDG 7 (Affordable and Clean Energy)** today. Ask me about solar power or conservation!"}
 
-    # --- MAIN TARGET KEYWORD MAP FOR HIGH SCORING ANSWERS ---
+    # --- MAIN TARGET KEYWORD MAP ---
     if clean_prompt in ["hi", "hy", "hello", "hey"]:
         return {"status": "success", "response": "Hello! 👋 I am **PowerWise AI**, your expert Advisor for **SDG 7 (Affordable and Clean Energy)**.\n\nHow can I help you optimize your household energy efficiency or learn about clean renewable technology today?"}
 
@@ -151,7 +151,7 @@ if "api_query" in query_params:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 5. COOL SIDEBAR WITH MULTIPLE SEGMENT OPTIONS ---
+# --- 5. SIDEBAR HUB ---
 st.sidebar.markdown("## ⚡ PowerWise Control Panel")
 st.sidebar.markdown("---")
 
@@ -186,4 +186,6 @@ st.title("⚡ PowerWise AI")
 st.markdown("<p class='unique-tagline'>✨ Fueling the Future, One Clean Prompt at a Time</p>", unsafe_allow_html=True)
 st.markdown("---")
 
+# Correctly Indented History Loop
 for message in st.session_state.messages:
+    avatar = "👤" if message["role"] == "user" else "🤖"

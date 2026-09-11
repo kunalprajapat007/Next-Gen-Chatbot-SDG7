@@ -26,11 +26,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 2. INITIALIZE GEMINI LLM FOR ALL-ROUND QUESTIONS ---
-# Streamlit secrets se API Key read karega
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
-    # Agar key na miley toh warning (Aap dashboard par badme add kar sakte hain)
     st.warning("⚠️ Please configure 'GEMINI_API_KEY' in Streamlit Secrets for full AI capabilities.")
 
 def run_api_backend(user_prompt, history_context=[]):
@@ -47,11 +45,11 @@ def run_api_backend(user_prompt, history_context=[]):
         name = user_prompt.lower().split("is")[-1].strip().title()
         return {"status": "success", "response": f"Nice to meet you, **{name}**! 🤝 I am PowerWise AI. I can answer any question you have, with a special expertise in SDG 7 (Clean Energy). What's on your mind?"}
 
-    # --- MAIN AI ENGINE (GEMINI) FOR UNLIMITED ANSWERS ---
+    # --- MAIN AI ENGINE (GEMINI 3.5 FLASH) ---
     try:
-        # System instructions to maintain identity but allowing ALL types of answers
+        # UPDATED: model_name badal kar gemini-3.5-flash kar diya gaya hai jo bilkul active hai
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-3.5-flash",
             system_instruction=(
                 "You are PowerWise AI. Your theme is based on SDG 7 (Affordable and Clean Energy). "
                 "However, you are an all-purpose AI assistant. You MUST answer ALL questions asked by the user, "
@@ -59,16 +57,15 @@ def run_api_backend(user_prompt, history_context=[]):
             )
         )
         
-        # Convert Streamlit history to Gemini format
         chat = model.start_chat(history=[])
         response = chat.send_message(user_prompt)
         return {"status": "success", "response": response.text}
         
     except Exception as e:
-        # Fallback if API fails or isn't set up yet
+        # Fallback response
         if clean_prompt in ["hi", "hy", "hello", "hey"]:
             return {"status": "success", "response": "Hello! 👋 I am **PowerWise AI**. Ask me absolutely anything today!"}
-        return {"status": "success", "response": f"I can answer this, but please set up your `GEMINI_API_KEY` in the Streamlit Cloud Secrets dashboard to enable my live brain! (Error: {str(e)})"}
+        return {"status": "success", "response": f"I can answer this, but please double check your `GEMINI_API_KEY` in Streamlit Cloud Secrets. (Error: {str(e)})"}
 
 # --- 3. DETECT IF JUDGES ARE QUERYING THE API VIA PARAMS ---
 query_params = st.query_params

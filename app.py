@@ -1,20 +1,17 @@
 import streamlit as st
 import os
 import json
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 # --- 1. CHATGPT DARK THEME STYLE (CSS HACK) ---
 st.set_page_config(page_title="ChatGPT - PowerWise SDG 7", page_icon="⚡", layout="centered")
 
 st.markdown("""
     <style>
-    /* Main Background & Chat Container */
     .stApp {
         background-color: #212121 !important;
         color: #ececec !important;
     }
-    /* Input Box styling like ChatGPT */
     .stChatInputContainer {
         padding-bottom: 20px !important;
     }
@@ -24,19 +21,17 @@ st.markdown("""
         color: #ffffff !important;
         border-radius: 12px !important;
     }
-    /* Headings & Text */
     h1, h2, h3, p, span, li {
         color: #ffffff !important;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif;
     }
-    /* Custom Sidebar styling */
     section[data-testid="stSidebar"] {
         background-color: #171717 !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. GET API KEY & INITIALIZE GEMINI ---
+# --- 2. GET API KEY & INITIALIZE GEMINI (CLASSIC STABLE SDK) ---
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
@@ -46,9 +41,10 @@ if not api_key:
     st.error("Missing GEMINI_API_KEY. Please set it in Streamlit Secrets.")
     st.stop()
 
-client = genai.Client(api_key=api_key)
+# Configure the classic stable library
+genai.configure(api_key=api_key)
 
-# --- 3. STRICT SDG 7 SYSTEM INSTRUCTION FOR RESPONSIBLE AI ---
+# --- 3. STRICT SDG 7 SYSTEM INSTRUCTION ---
 SYSTEM_INSTRUCTION = (
     "You are 'PowerWise AI', a world-class Clean Energy Advisor designed exactly like ChatGPT, specialized in SDG 7: Affordable and Clean Energy. "
     "Provide very detailed, deeply informative, structured, and realistic advice on energy efficiency, renewable energy concepts (solar, wind), "
@@ -57,28 +53,23 @@ SYSTEM_INSTRUCTION = (
     "'I am a specialized SDG 7 Clean Energy Advisor. I can only assist with queries related to sustainable energy, electricity conservation, and clean technology.'"
 )
 
-# --- 4. BACKEND API FUNCTION FOR JUDGES (Using Gemini) ---
+# --- 4. BACKEND API FUNCTION FOR JUDGES ---
 def run_api_backend(user_prompt, history_context=[]):
     try:
-        contents = []
-        # Build chat history for memory
+        # Initialize model with stable version and system instruction
+        model = genai.GenerativeModel(
+            model_name='gemini-1.5-flash',
+            system_instruction=SYSTEM_INSTRUCTION
+        )
+        
+        # Format history for the classic SDK
+        formatted_history = []
         for msg in history_context:
             role = "user" if msg["role"] == "user" else "model"
-            contents.append(types.Content(role=role, parts=[types.Part.from_text(text=msg["content"])]))
-        
-        contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_prompt)]))
-        
-        config = types.GenerateContentConfig(
-            system_instruction=SYSTEM_INSTRUCTION,
-            temperature=0.7,
-        )
-        
-        # Using standard robust production model to avoid 404/403 blocks
-        response = client.models.generate_content(
-            model='gemini-1.5-flash',
-            contents=contents,
-            config=config,
-        )
+            formatted_history.append({"role": role, "parts": [msg["content"]]})
+            
+        chat = model.start_chat(history=formatted_history)
+        response = chat.send_message(user_prompt)
         return {"status": "success", "response": response.text}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -95,21 +86,17 @@ if "api_query" in query_params:
 st.title("⚡ PowerWise AI")
 st.markdown("*ChatGPT-powered Expert Advisor for SDG 7: Affordable & Clean Energy*")
 
-# Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display chat history with custom avatars
 for message in st.session_state.messages:
     avatar = "👤" if message["role"] == "user" else "🤖"
     with st.chat_message(message["role"], avatar=avatar):
         st.markdown(message["content"])
 
-# React to user input
 if prompt := st.chat_input("Message PowerWise AI..."):
     st.chat_message("user", avatar="👤").markdown(prompt)
     
-    # Fast Response generation with loader
     with st.spinner("⚡ PowerWise AI is thinking..."):
         api_response = run_api_backend(prompt, st.session_state.messages)
         
@@ -118,7 +105,6 @@ if prompt := st.chat_input("Message PowerWise AI..."):
     else:
         answer = f"Error generating response: {api_response['message']}"
 
-    # Save to history to maintain correct memory state context
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("assistant", avatar="🤖"):
         st.markdown(answer)

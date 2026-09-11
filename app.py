@@ -2,19 +2,18 @@ import streamlit as st
 import json
 import urllib.request
 
-# --- 1. CHATGPT LUXURY DARK THEME LAYOUT (NO SIDEBAR) ---
-st.set_page_config(page_title="ChatGPT - PowerWise SDG 7", page_icon="⚡", layout="centered")
+# --- 1. CLEAN LIGHT THEME LAYOUT (NO SIDEBAR, NO CALCULATOR) ---
+st.set_page_config(page_title="PowerWise SDG 7", page_icon="⚡", layout="centered")
 
 st.markdown("""
     <style>
-    /* ChatGPT Dark Theme */
-    .stApp { background-color: #212121 !important; color: #ececec !important; }
+    /* Clean Light Mode Styling */
+    .stApp { background-color: #ffffff !important; color: #101214 !important; }
     .stChatInputContainer { padding-bottom: 20px !important; }
-    .stChatInput div { background-color: #2f2f2f !important; border: 1px solid #424242 !important; color: #ffffff !important; border-radius: 12px !important; }
-    h1, h2, h3, p, span, li, label { color: #ffffff !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    div[data-testid="stMetricValue"] { color: #00ffcc !important; font-weight: bold; }
+    .stChatInput div { background-color: #f4f4f4 !important; border: 1px solid #e3e3e3 !important; color: #101214 !important; border-radius: 12px !important; }
+    h1, h2, h3, p, span, li, label { color: #101214 !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     
-    /* Completely Hide Sidebar Button & Panel for Clean UI */
+    /* Completely Hide Sidebar Panel and Toggle for Clean Full-Screen UI */
     section[data-testid="stSidebar"] { display: none !important; }
     button[data-testid="sidebar-toggle"] { display: none !important; }
     </style>
@@ -60,14 +59,14 @@ def run_api_backend(user_prompt, history_context=[]):
         with urllib.request.urlopen(req, timeout=12) as response:
             res = json.loads(response.read().decode("utf-8"))
             if isinstance(res, list) and len(res) > 0:
-                answer = res[0].get("generated_text", "").strip()
+                answer = res.get("generated_text", "").strip()
             elif isinstance(res, dict):
                 answer = res.get("generated_text", "").strip()
             else:
                 answer = str(res)
             
             # Clean lingering tags safely
-            answer = answer.split("<|")[0].strip()
+            answer = answer.split("<|").strip()
             return {"status": "success", "response": answer}
             
     except Exception as e:
@@ -101,36 +100,14 @@ def run_api_backend(user_prompt, history_context=[]):
 query_params = st.query_params
 if "api_query" in query_params:
     input_query = query_params["api_query"]
-    # Pass history if available, else empty array
     api_result = run_api_backend(input_query, st.session_state.get("messages", []))
     st.text(json.dumps(api_result))
     st.stop()
 
-# --- 5. INTERACTIVE INTERFACE: SDG 7 SAVINGS CALCULATOR ---
-st.title("⚡ PowerWise AI Dash")
-st.markdown("### 📊 Interactive SDG 7 Energy & Carbon Savings Tool")
-
-col1, col2 = st.columns(2)
-with col1:
-    current_bill = st.slider("Your Monthly Electricity Bill (in ₹)", 500, 15000, 3000, step=100)
-    led_switch = st.checkbox("Switched all household lights to Smart LEDs?")
-    solar_installed = st.checkbox("Have or plan to install Solar Rooftops?")
-
-potential_savings = 0
-if led_switch: potential_savings += 0.15 
-if solar_installed: potential_savings += 0.60 
-
-total_saved_money = current_bill * potential_savings
-co2_prevented = (total_saved_money * 0.82) / 10 
-
-with col2:
-    st.metric(label="Estimated Monthly Money Saved", value=f"₹{total_saved_money:,.2f}")
-    st.metric(label="CO2 Emissions Prevented Monthly", value=f"{co2_prevented:.1f} kg")
-
+# --- 5. CLEAN CHAT INTERFACE ---
+st.title("⚡ PowerWise AI")
+st.markdown("*ChatGPT-style Expert Advisor for SDG 7: Affordable & Clean Energy*")
 st.markdown("---")
-
-# --- 6. CHATGPT BRANDED WEB UI INTERFACE ---
-st.markdown("### 🤖 Chat with PowerWise AI Advisor")
 
 # Initialize persistent memory state
 if "messages" not in st.session_state:
@@ -143,7 +120,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 if prompt := st.chat_input("Message PowerWise AI..."):
-    # Append the user's fresh message to history first
+    # Append user's message to history
     st.session_state.messages.append({"role": "user", "content": prompt})
     
     with st.chat_message("user", avatar="👤"):

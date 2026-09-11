@@ -1,24 +1,24 @@
 import streamlit as st
 import json
 
-# --- 1. PERFECT SEAMLESS UNIFIED VIEWPORT THEME ---
+# --- 1. PERFECT SEAMLESS VISUAL THEME ---
 st.set_page_config(page_title="PowerWise SDG 7", page_icon="⚡", layout="centered")
 
+# Cleaned & fixed CSS to guarantee Chat Input visibility
 st.markdown("""
     <style>
-    /* Absolute uniform background across all viewport elements */
+    /* Continuous dark background for entire viewport */
     html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .stApp { 
         background-color: #0f172a !important; 
         color: #f8fafc !important; 
     }
     
-    /* Make sure the chat input zone naturally sits on the same background */
-    div[data-testid="stChatInputContainer"] {
+    /* FIX: Force bottom chat container to be visible and correctly colored */
+    [data-testid="stBottom"] {
         background-color: #0f172a !important;
-        padding-bottom: 20px !important;
     }
     
-    /* Ultra-Interactive Chat Input Search Bar */
+    /* Interactive Branded Chat Input Box */
     .stChatInput div { 
         background-color: #1e293b !important; 
         border: 2px solid #334155 !important; 
@@ -27,13 +27,13 @@ st.markdown("""
         transition: all 0.3s ease;
     }
     
-    /* Neon Glow & Precision expansion focus state on mouse interaction */
+    /* Neon Glow on Hover & Focus */
     .stChatInput div:hover, .stChatInput div:focus-within {
         border-color: #00d2ff !important;
         box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
     }
     
-    /* Typography Customizations */
+    /* Typography Style Customization */
     h1, h2, h3, p, span, li, label { 
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
     }
@@ -142,7 +142,7 @@ def run_api_backend(user_prompt, history_context=[]):
         "I cannot provide advice on general conversations, coding, or unrelated queries. Please ask me about **renewable energy concepts, energy efficiency, household conservation, or clean tech choices** to proceed!"
     )}
 
-# --- 4. DETECT IF JUDGES ARE QUERYING THE API VIA PARAMS ---
+# --- 3. DETECT IF JUDGES ARE QUERYING THE API VIA PARAMS ---
 query_params = st.query_params
 if "api_query" in query_params:
     input_query = query_params["api_query"]
@@ -150,11 +150,11 @@ if "api_query" in query_params:
     st.text(json.dumps(api_result))
     st.stop()
 
-# --- 5. INITIALIZE PERSISTENT CHAT HISTORY ---
+# --- 4. INITIALIZE PERSISTENT CHAT HISTORY ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 6. SIDEBAR HUB ---
+# --- 5. SIDEBAR HUB ---
 st.sidebar.markdown("## ⚡ PowerWise Control Panel")
 st.sidebar.markdown("---")
 
@@ -184,8 +184,9 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### 👨‍⚖️ Evaluation Guide")
 st.sidebar.caption("💡 Try asking: *'My name is Kunal'* followed by *'What is my name?'* to test full conversational chat memory context tracking live.")
 
-# --- 7. MAIN UNIFIED INTERACTIVE CHAT INTERFACE ---
+# --- 6. MAIN UNIFIED INTERACTIVE CHAT INTERFACE ---
 st.title("⚡ PowerWise AI")
 st.markdown("<p class='unique-tagline'>✨ Fueling the Future, One Clean Prompt at a Time</p>", unsafe_allow_html=True)
 st.markdown("---")
 
+# Render persistent conversation threads beautifully

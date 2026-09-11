@@ -2,21 +2,24 @@ import streamlit as st
 import json
 import urllib.request
 
-# --- 1. UNIFIED FUTURISTIC COLOR THEME (NO SPLIT SCREEN EFFECT) ---
+# --- 1. PERFECT UNIFIED CONTINUOUS COLOR THEME ---
 st.set_page_config(page_title="PowerWise SDG 7", page_icon="⚡", layout="centered")
 
 st.markdown("""
     <style>
-    /* Continuous Fluid Background for a cohesive unified screen look */
-    .stApp { 
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important; 
+    /* Global Background Override - Ensures the entire viewport is exactly the same color */
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .stApp { 
+        background: #0f172a !important; 
         color: #f8fafc !important; 
     }
     
-    /* Clean Seamless Input Box */
-    .stChatInputContainer { padding-bottom: 20px !important; }
+    /* Input Container & Box Match styling perfectly to avoid split effect */
+    div[data-testid="stChatInputContainer"] {
+        background-color: #0f172a !important;
+        padding-bottom: 20px !important;
+    }
     .stChatInput div { 
-        background-color: #0f172a !important; 
+        background-color: #1e293b !important; 
         border: 2px solid #00d2ff !important; 
         color: #ffffff !important; 
         border-radius: 16px !important;
@@ -181,7 +184,7 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### 👨‍⚖️ Evaluation Guide")
 st.sidebar.caption("💡 Try asking: *'My name is Kunal'* followed by *'What is my name?'* to test full conversational chat memory context tracking live.")
 
-# --- 7. MAIN COHESIVE INTERACTIVE CHAT INTERFACE ---
+# --- 7. MAIN UNIFIED INTERACTIVE CHAT INTERFACE ---
 st.title("⚡ PowerWise AI")
 st.markdown("---")
 

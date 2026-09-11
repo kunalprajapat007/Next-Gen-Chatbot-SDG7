@@ -1,18 +1,26 @@
+import streamlit as st
 import os
-import sys
-import gradio as gr
 from google import genai
 from google.genai import types
-from google.genai.errors import APIError
 
-# 1. Initialize Gemini Client
-try:
-    client = genai.Client()
-except Exception as e:
-    print(f"Error initializing Gemini Client: {e}")
-    sys.exit(1)
+# Page Title & Visual Anchor
+st.set_page_config(page_title="PowerWise AI - SDG 7", page_icon="⚡", layout="centered")
+st.title("⚡ PowerWise AI - SDG 7 Clean Energy Advisor")
+st.caption("Silver Oak University - Next Gen Chatbot Arena")
 
-# 2. Strict SDG 7 System Instructions for Responsible AI
+# 1. Initialize Gemini Client safely using Streamlit Secrets
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+else:
+    api_key = os.environ.get("GEMINI_API_KEY")
+
+if not api_key:
+    st.error("Missing GEMINI_API_KEY. Please set it in Streamlit Secrets.")
+    st.stop()
+
+client = genai.Client(api_key=api_key)
+
+# 2. Strict SDG 7 System Instructions
 SYSTEM_INSTRUCTION = (
     "You are 'PowerWise AI', an expert Clean Energy Advisor specialized in SDG 7: Affordable and Clean Energy. "
     "Your core mission is to educate users on four key pillars:\n"
@@ -26,59 +34,51 @@ SYSTEM_INSTRUCTION = (
     "- If the user asks about unrelated topics (like movies, sports, or politics), politely redirect them back to SDG 7 and saving energy."
 )
 
-def predict(message, history):
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Display chat history
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Quick Suggestion Buttons for Judges
+st.sidebar.markdown("### 💡 Example Prompts for Judges")
+if st.sidebar.button("How to reduce light bills by 20%?"):
+    st.session_state.messages.append({"role": "user", "content": "How to reduce light bills by 20%?"})
+if st.sidebar.button("Explain Solar vs Wind Energy"):
+    st.session_state.messages.append({"role": "user", "content": "Explain Solar vs Wind Energy"})
+
+# React to user input
+if prompt := st.chat_input("Ask about Clean Energy & Efficiency..."):
+    # Display user message
+    st.chat_message("user").markdown(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    # Prepare context for Gemini
     contents = []
-    for human, ai in history:
-        contents.append(types.Content(role="user", parts=[types.Part.from_text(text=human)]))
-        contents.append(types.Content(role="model", parts=[types.Part.from_text(text=ai)]))
-    
-    contents.append(types.Content(role="user", parts=[types.Part.from_text(text=message)]))
-    
+    for msg in st.session_state.messages:
+        role = "user" if msg["role"] == "user" else "model"
+        contents.append(types.Content(role=role, parts=[types.Part.from_text(text=msg["content"])]))
+
     config = types.GenerateContentConfig(
         system_instruction=SYSTEM_INSTRUCTION,
         temperature=0.7,
     )
-    
+
+    # Get Response from Gemini
     try:
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=contents,
             config=config,
         )
-        return response.text
-    except APIError as e:
-        if e.code == 429:
-            try:
-                response = client.models.generate_content(
-                    model='gemini-1.5-flash',
-                    contents=contents,
-                    config=config,
-                )
-                return response.text + "\n\n*(Served via backup model due to high traffic)*"
-            except Exception as fallback_error:
-                return f"Rate limit reached. Please retry in a moment. Error: {str(fallback_error)}"
-        else:
-            return f"API Error: {str(e)}"
+        answer = response.text
     except Exception as e:
-        return f"An unexpected error occurred: {str(e)}"
+        answer = f"Error generating response: {str(e)}"
 
-# 3. Build Web Interface
-demo = gr.ChatInterface(
-    fn=predict,
-    title="⚡ PowerWise AI - SDG 7 Clean Energy Advisor",
-    description=(
-        "Welcome! I am your AI guide for SDG 7 (Affordable & Clean Energy). "
-        "Ask me about solar power, cutting electricity bills, or energy-efficient choices!"
-    ),
-    examples=[
-        "How can I cut down my household electricity bill by 20%?",
-        "Explain the difference between energy efficiency and conservation.",
-        "What are the benefits of switching to solar energy at home?",
-        "What should I look for when buying an energy-efficient appliance?"
-    ],
-    theme="soft",
-    type="messages"
-)
-
-if __name__ == "__main__":
-    demo.launch()
+    # Display assistant response
+    with st.chat_message("assistant"):
+        st.markdown(answer)
+    st.session_state.messages.append({"role": "assistant", "content": answer})

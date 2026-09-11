@@ -1,0 +1,17 @@
+# Python temporary files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+
+# Streamlit logs and configuration
+.streamlit/config.toml
+.streamlit/secrets.toml
+
+# Operating System files
+.DS_Store
+Thumbs.db

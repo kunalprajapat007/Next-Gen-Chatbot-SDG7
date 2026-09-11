@@ -1,14 +1,13 @@
 import streamlit as st
 import os
+import json
 from google import genai
 from google.genai import types
 
-# Page Title & Visual Anchor
+# --- 1. SET UP THE PAGE ---
 st.set_page_config(page_title="PowerWise AI - SDG 7", page_icon="⚡", layout="centered")
-st.title("⚡ PowerWise AI - SDG 7 Clean Energy Advisor")
-st.caption("Silver Oak University - Next Gen Chatbot Arena")
 
-# 1. Initialize Gemini Client safely using Streamlit Secrets
+# --- 2. GET API KEY & INITIALIZE GEMINI ---
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
@@ -20,19 +19,40 @@ if not api_key:
 
 client = genai.Client(api_key=api_key)
 
-# 2. Strict SDG 7 System Instructions
+# --- 3. STRICT SDG 7 SYSTEM INSTRUCTION ---
 SYSTEM_INSTRUCTION = (
     "You are 'PowerWise AI', an expert Clean Energy Advisor specialized in SDG 7: Affordable and Clean Energy. "
-    "Your core mission is to educate users on four key pillars:\n"
-    "1. Energy Efficiency (explaining concepts like LED lighting, smart thermostats, and energy star ratings).\n"
-    "2. Renewable Energy Concepts (breaking down solar, wind, hydro, and biomass in simple terms).\n"
-    "3. Household Conservation Practices (giving practical steps to lower electricity bills and save power at home).\n"
-    "4. Sustainable Choices (guiding buying decisions for appliances, electric vehicles, and green tariffs).\n\n"
-    "Rules:\n"
-    "- Provide structured, highly accurate, scannable, and realistic advice.\n"
-    "- Maintain a responsible, polite, and encouraging tone.\n"
-    "- If the user asks about unrelated topics (like movies, sports, or politics), politely redirect them back to SDG 7 and saving energy."
+    "Your core mission is to educate users on: Energy Efficiency, Renewable Energy, Household Conservation, and Sustainable Choices. "
+    "Rules: Provide structured, highly accurate advice. If asked about unrelated topics, politely redirect back to SDG 7."
 )
+
+# --- 4. BACKEND API FUNCTION FOR JUDGES (Using Latest Gemini 3.6 Model) ---
+def run_api_backend(user_prompt):
+    try:
+        config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_INSTRUCTION,
+            temperature=0.7,
+        )
+        response = client.models.generate_content(
+            model='gemini-3.6-flash',  # Updated to the latest 2026 model
+            contents=user_prompt,
+            config=config,
+        )
+        return {"status": "success", "response": response.text}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+# --- 5. DETECT IF JUDGES ARE QUERYING THE API VIA PARAMS ---
+query_params = st.query_params
+if "api_query" in query_params:
+    input_query = query_params["api_query"]
+    api_result = run_api_backend(input_query)
+    st.text(json.dumps(api_result))
+    st.stop()
+
+# --- 6. STANDARD WEB UI INTERFACE ---
+st.title("⚡ PowerWise AI - SDG 7 Clean Energy Advisor")
+st.caption("Silver Oak University - Next Gen Chatbot Arena")
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -43,42 +63,35 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Quick Suggestion Buttons for Judges
-st.sidebar.markdown("### 💡 Example Prompts for Judges")
-if st.sidebar.button("How to reduce light bills by 20%?"):
-    st.session_state.messages.append({"role": "user", "content": "How to reduce light bills by 20%?"})
-if st.sidebar.button("Explain Solar vs Wind Energy"):
-    st.session_state.messages.append({"role": "user", "content": "Explain Solar vs Wind Energy"})
-
 # React to user input
 if prompt := st.chat_input("Ask about Clean Energy & Efficiency..."):
-    # Display user message
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # Prepare context for Gemini
     contents = []
     for msg in st.session_state.messages:
         role = "user" if msg["role"] == "user" else "model"
         contents.append(types.Content(role=role, parts=[types.Part.from_text(text=msg["content"])]))
 
-    config = types.GenerateContentConfig(
-        system_instruction=SYSTEM_INSTRUCTION,
-        temperature=0.7,
-    )
+    config = types.GenerateContentConfig(system_instruction=SYSTEM_INSTRUCTION, temperature=0.7)
 
-    # Get Response from Gemini
     try:
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.6-flash',  # Updated to the latest 2026 model
             contents=contents,
             config=config,
         )
         answer = response.text
     except Exception as e:
-        answer = f"Error generating response: {str(e)}"
+        answer = f"Error: {str(e)}"
 
-    # Display assistant response
     with st.chat_message("assistant"):
         st.markdown(answer)
     st.session_state.messages.append({"role": "assistant", "content": answer})
+
+# --- 7. SHOW JURIES HOW TO USE THE API ---
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🔌 Evaluation API Endpoint")
+st.sidebar.info(
+    "To test the reachable API endpoint, add `?api_query=YOUR_QUESTION` to the end of this web URL."
+)

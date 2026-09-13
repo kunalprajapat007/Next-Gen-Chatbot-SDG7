@@ -1,6 +1,6 @@
 import streamlit as st
-#import google.generativeai as genai
-from google import genai
+import google.generativeai as genai
+#from google import genai
 
 # --- 1. CLEAN STANDARD LAYOUT (FIXES INPUT BOX VISIBILITY) ---
 st.set_page_config(page_title="PowerWise SDG 7", page_icon="⚡", layout="centered")
